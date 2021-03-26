@@ -1,0 +1,17 @@
+{
+  "name": "pitch-app",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "./scripts/start.sh"
+  },
+  "dependencies": {
+    "bootstrap": "4.6.0",
+    "ml5": "0.3.1",
+    "p5": "0.9.0",
+    "jquery": "3.5.1",
+    "popper.js": "1.16.1"
+  }
+}
