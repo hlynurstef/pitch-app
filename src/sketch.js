@@ -1,39 +1,53 @@
-// Daniel Shiffman
-// https://thecodingtrain.com/CodingChallenges/151-ukulele-tuner.html
-// https://youtu.be/F1OkDTUkKFo
-// https://editor.p5js.org/codingtrain/sketches/8io2zvT03
-
 const model_url = "http://localhost:8000/model";
 let pitch;
 let mic;
 let freq = 0;
 let threshold = 1;
 let micIsOn = false;
-
-let notes = [
-  {
-    note: "A",
-    freq: 440,
-  },
-  {
-    note: "E",
-    freq: 329.6276,
-  },
-  {
-    note: "C",
-    freq: 261.6256,
-  },
-  {
-    note: "G",
-    freq: 391.9954,
-  },
+const NOTE_NAMES = [
+  "C",
+  "Db",
+  "D",
+  "Eb",
+  "E",
+  "F",
+  "Gb",
+  "G",
+  "Ab",
+  "A",
+  "Bb",
+  "B",
 ];
+let noteToPlay;
+const width = 400;
+const height = 400;
+const canvasDiagonal = width * Math.sqrt(2);
 
-function setup() {
-  createCanvas(400, 400);
+function pickNewRandomNote() {
+  const pickedNote = NOTE_NAMES[Math.floor(Math.random() * NOTE_NAMES.length)];
+  if (pickedNote !== noteToPlay) {
+    return pickedNote;
+  } else {
+    return pickNewRandomNote();
+  }
 }
 
 $("#button").on("click", handleButtonClick);
+
+function setup() {
+  let canvas = createCanvas(width, height);
+  canvas.center();
+  noteToPlay = pickNewRandomNote();
+}
+
+function frequencyToNote(f) {
+  const n = 69 + 12 * Math.log2(f / 440.0);
+  const nRound = Math.round(n);
+  const cents = Math.floor((n.toFixed(2) - nRound) * 100);
+  // console.log(n, nRound, cents);
+  // const cents = (n/12 - 1).toString();
+  return [NOTE_NAMES[nRound % 12], cents];
+}
 
 function handleButtonClick(event) {
   if (!micIsOn) {
@@ -60,52 +74,46 @@ function listening() {
   );
 }
 
+let pickNewNote = false;
+let ellipseWidth = 0;
+
 function draw() {
   background(0);
-  textAlign(CENTER, CENTER);
   fill(255);
-  textSize(32);
-  text(freq.toFixed(2), width / 2, height - 150);
 
-  let closestNote = -1;
-  let recordDiff = Infinity;
-  for (let i = 0; i < notes.length; i++) {
-    let diff = freq - notes[i].freq;
-    if (abs(diff) < abs(recordDiff)) {
-      closestNote = notes[i];
-      recordDiff = diff;
+  if (micIsOn) {
+    // const [noteName, cents] = frequencyToNote(freq);
+    textSize(64);
+    textAlign(CENTER, CENTER);
+    text(noteToPlay, width / 2, height / 2);
+
+    // Render the note to guess
+    if (freq) {
+      const [noteName, cents] = frequencyToNote(freq);
+      if (noteName === noteToPlay) {
+        pickNewNote = true;
+      }
+    }
+
+    // Animate circle and pick a new note
+    if (pickNewNote) {
+      // fill screen in 0.25 second
+      ellipseWidth = ellipseWidth + ((100 / 0.4) * deltaTime) / 1000;
+      // console.log(ellipseWidth);
+      fill(255, 255, 255);
+      ellipse(
+        width / 2,
+        height / 2,
+        lerp(0, canvasDiagonal + 20, ellipseWidth / 100)
+      );
+      if (ellipseWidth >= 100) {
+        pickNewNote = false;
+        ellipseWidth = 0;
+        noteToPlay = pickNewRandomNote();
+        freq = 0;
+      }
     }
   }
-
-  textSize(64);
-  text(closestNote.note, width / 2, height - 50);
-
-  let diff = recordDiff;
-  // let amt = map(diff, -100, 100, 0, 1);
-  // let r = color(255, 0, 0);
-  // let g = color(0, 255, 0);
-  // let col = lerpColor(g, r, amt);
-
-  let alpha = map(abs(diff), 0, 100, 255, 0);
-  rectMode(CENTER);
-  fill(255, alpha);
-  stroke(255);
-  strokeWeight(1);
-  if (abs(diff) < threshold) {
-    fill(0, 255, 0);
-  }
-  rect(200, 100, 200, 50);
-
-  stroke(255);
-  strokeWeight(4);
-  line(200, 0, 200, 200);
-
-  noStroke();
-  fill(255, 0, 0);
-  if (abs(diff) < threshold) {
-    fill(0, 255, 0);
-  }
-  rect(200 + diff / 2, 100, 10, 75);
 }
 
 function modelLoaded() {
@@ -117,7 +125,6 @@ function gotPitch(error, frequency) {
   if (error) {
     console.error(error);
   } else {
-    //console.log(frequency);
     if (frequency) {
       freq = frequency;
     }
